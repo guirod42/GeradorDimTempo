@@ -16,14 +16,14 @@ namespace DimTempoGenerator
             Quarta = 4,
             Quinta = 5,
             Sexta = 6,
-            Sabado = 7
+            Sábado = 7
         }
 
         public enum Meses
         {
             Janeiro = 1,
             Fevereiro = 2,
-            Marco = 3,
+            Março = 3,
             Abril = 4,
             Maio = 5,
             Junho = 6,
