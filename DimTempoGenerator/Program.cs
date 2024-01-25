@@ -7,22 +7,27 @@ using System.Globalization;
 
 namespace DimTempoGenerator
 {
-    class Program
+    public class Program
     {
         static void Main(string[] args)
         {
-            StreamWriter arquivo = new StreamWriter("C:\\ScriptDimTempo.sql", false);
-            Calendar calendario = CultureInfo.CurrentCulture.Calendar;
 
             int primeiroDia = 1;
             int primeiroMes = 1;
             int primeiroAno = 2024;
             string nomeTabela = "DimTempoTeste";
+            ScriptTabela(primeiroDia, primeiroMes, primeiroAno, nomeTabela);
+        }
+        
+        static void ScriptTabela(int primeiroDia, int primeiroMes, int primeiroAno, string nomeTabela)
+        {
+            StreamWriter arquivo = new StreamWriter("C:\\ScriptDimTempo.sql", false);
+            Calendar calendario = CultureInfo.CurrentCulture.Calendar;
 
             int quantidadeDeDias = 366;
 
             DateTime dataInicial = new(primeiroAno, primeiroMes, primeiroDia);
-            DateTime dataFinal = dataInicial.AddDays(quantidadeDeDias-1);
+            DateTime dataFinal = dataInicial.AddDays(quantidadeDeDias - 1);
 
             arquivo.WriteLine("/*");
             arquivo.WriteLine($"Arquivo gerado em {System.DateTime.Now}");
@@ -98,7 +103,6 @@ namespace DimTempoGenerator
                     $"'{feriadoNome}')");
             }
 
-            //close the file
             arquivo.WriteLine();
             arquivo.WriteLine($"SELECT * FROM {nomeTabela}");
             arquivo.Close();
@@ -112,6 +116,10 @@ namespace DimTempoGenerator
                 }
                 return valor;
             }
+        }
+        static void ScriptFeriados()
+        {
+
         }
     }
 }
