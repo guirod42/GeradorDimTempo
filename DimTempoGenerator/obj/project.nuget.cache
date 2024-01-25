@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "MMcckMkkLkTJVUt6fQVP4g2o3eXBeq9BTB8i68wOb1IHw12fi8WT6YyodfdAeeCim6R8hLqrzligAUtFCkSDYg==",
+  "success": true,
+  "projectFilePath": "C:\\_Repositorios\\guirod42\\GeradorDimTempo\\DimTempoGenerator\\DimTempoGenerator.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\guilhermerodrigues\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}
