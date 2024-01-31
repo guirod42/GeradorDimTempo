@@ -4,27 +4,35 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.IO;
 using System.Globalization;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace DimTempoGenerator
 {
     public class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-
             int primeiroDia = 1;
             int primeiroMes = 1;
-            int primeiroAno = 2024;
+            int primeiroAno = 2000;
             string nomeTabela = "DimTempoTeste";
-            ScriptTabela(primeiroDia, primeiroMes, primeiroAno, nomeTabela);
-        }
-        
-        static void ScriptTabela(int primeiroDia, int primeiroMes, int primeiroAno, string nomeTabela)
-        {
-            StreamWriter arquivo = new StreamWriter("C:\\ScriptDimTempo.sql", false);
-            Calendar calendario = CultureInfo.CurrentCulture.Calendar;
+            int quantidadeAnos = 60;
+            ScriptTabela(primeiroDia, primeiroMes, primeiroAno, quantidadeAnos, nomeTabela);
 
-            int quantidadeDeDias = 366;
+            int[] anosInicialFinal = new int[2] { 2000, 2021 };
+            Console.WriteLine("Antes de executar");
+            BuscarFeriados();
+            Console.WriteLine("Depois de executar");
+        }
+
+        static void ScriptTabela(int primeiroDia, int primeiroMes, int primeiroAno, int quantidadeAnos, string nomeTabela)
+        {
+            int quantidadeDeDias = quantidadeAnos * 366;
+
+            StreamWriter arquivo = new("C:\\ScriptDimTempo.sql", false);
+            Calendar calendario = CultureInfo.CurrentCulture.Calendar;
 
             DateTime dataInicial = new(primeiroAno, primeiroMes, primeiroDia);
             DateTime dataFinal = dataInicial.AddDays(quantidadeDeDias - 1);
@@ -43,25 +51,25 @@ namespace DimTempoGenerator
             arquivo.WriteLine("GO");
             arquivo.WriteLine();
 
-            arquivo.WriteLine($"CREATE TABLE [dbo].[{nomeTabela}] (");
-            arquivo.WriteLine("\tTempoID int,");
-            arquivo.WriteLine("\tData datetime,");
-            arquivo.WriteLine("\tDiaMes int,");
-            arquivo.WriteLine("\tMes int,");
-            arquivo.WriteLine("\tAno int,");
-            arquivo.WriteLine("\tDataCompleta char(10),");
-            arquivo.WriteLine("\tDiaAno int,");
-            arquivo.WriteLine("\tDiaSemana int,");
-            arquivo.WriteLine("\tSemanaMes int,");
-            arquivo.WriteLine("\tSemanaAno int,");
-            arquivo.WriteLine("\tBimestre int,");
-            arquivo.WriteLine("\tTrimestre int,");
-            arquivo.WriteLine("\tSemestre int,");
-            arquivo.WriteLine("\tNomeDiaSemana varchar(20),");
-            arquivo.WriteLine("\tNomeMes varchar(20),");
-            arquivo.WriteLine("\tFeriado bit DEFAULT 0,");
-            arquivo.WriteLine("\tFeriadoNome varchar(20) DEFAULT ''");
-            arquivo.WriteLine(")");
+            arquivo.WriteLine($"CREATE TABLE [dbo].[{nomeTabela}] (\n " +
+                                $"\tTempoID int,\n" +
+                                $"\tData datetime,\n" +
+                                $"\tDiaMes int,\n" +
+                                $"\tMes int,\n" +
+                                $"\tAno int,\n" +
+                                $"\tDataCompleta char(10),\n" +
+                                $"\tDiaAno int,\n" +
+                                $"\tDiaSemana int,\n" +
+                                $"\tSemanaMes int,\n" +
+                                $"\tSemanaAno int,\n" +
+                                $"\tBimestre int,\n" +
+                                $"\tTrimestre int,\n" +
+                                $"\tSemestre int,\n" +
+                                $"\tNomeDiaSemana varchar(20),\n" +
+                                $"\tNomeMes varchar(20),\n" +
+                                $"\tFeriado bit DEFAULT 0,\n" +
+                                $"\tFeriadoNome varchar(20) DEFAULT ''\n" +
+                                ")");
             arquivo.WriteLine();
 
             for (int i = 0; i < quantidadeDeDias; i++)
@@ -83,7 +91,7 @@ namespace DimTempoGenerator
                 int feriado = 0;
                 string feriadoNome = "";
 
-                arquivo.WriteLine($"INSERT INTO {nomeTabela} " +
+                arquivo.WriteLine($"INSERT INTO [dbo.][{nomeTabela}] " +
                     $"VALUES ({ano}{zeroEsquerda(mes)}{zeroEsquerda(diaMes)}," +
                     $"'{ano}-{zeroEsquerda(mes)}-{zeroEsquerda(diaMes)}T00:00:00'," +
                     $"{diaMes}," +
@@ -104,7 +112,7 @@ namespace DimTempoGenerator
             }
 
             arquivo.WriteLine();
-            arquivo.WriteLine($"SELECT * FROM {nomeTabela}");
+            arquivo.WriteLine($"SELECT * FROM [dbo].[{nomeTabela}]");
             arquivo.Close();
 
             static string zeroEsquerda(int num)
@@ -117,9 +125,35 @@ namespace DimTempoGenerator
                 return valor;
             }
         }
-        static void ScriptFeriados()
+        static async Task ScriptFeriados(string nomeTabela, int[] anosInicialFinal)
         {
+            HttpClient client = new HttpClient { BaseAddress = new Uri("https://brasilapi.com.br/api/feriados/v1") };
+            var response = await client.GetAsync("2000");
+            var content = await response.Content.ReadAsStringAsync();
+            Console.WriteLine("Teste aqui ?");
 
+            var resposta = JsonConvert.DeserializeObject(content);
+            Console.WriteLine(resposta);
+            Console.ReadLine();
+        }
+
+        public static void BuscarFeriados()
+        {
+            string urlApi = "https://brasilapi.com.br/api/feriados/v1/2020";
+            try
+            {
+                using (var cliente = new HttpClient())
+                {
+                    var resposta = cliente.GetStringAsync(urlApi);
+                    resposta.Wait();
+                    var retorno = JsonConvert.DeserializeObject<Feriados[]>(resposta.Result).ToList();
+                    Console.WriteLine(retorno[0]);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
     }
 }
