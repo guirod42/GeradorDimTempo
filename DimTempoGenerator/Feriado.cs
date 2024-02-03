@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DimTempoGenerator
 {
-    public class Feriados
+    public class Feriado
     {
         public DateTime date { get; set; }
         public string name { get; set; }

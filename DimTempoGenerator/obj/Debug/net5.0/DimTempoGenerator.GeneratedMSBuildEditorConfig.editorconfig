@@ -7,4 +7,4 @@ build_property.PublishSingleFile =
 build_property.IncludeAllContentForSelfExtract = 
 build_property._SupportedPlatformList = Android,iOS,Linux,macOS,Windows
 build_property.RootNamespace = DimTempoGenerator
-build_property.ProjectDir = C:\_Repositorios\guirod42\GeradorDimTempo\DimTempoGenerator\
+build_property.ProjectDir = H:\_repositorios\guirod42\GeradorDimTempo\DimTempoGenerator\

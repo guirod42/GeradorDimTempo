@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace DimTempoGenerator
 {
@@ -14,40 +15,83 @@ namespace DimTempoGenerator
     {
         static void Main()
         {
-            int primeiroDia = 1;
-            int primeiroMes = 1;
             int primeiroAno = 2000;
-            string nomeTabela = "DimTempoTeste";
-            int quantidadeAnos = 60;
-            ScriptTabela(primeiroDia, primeiroMes, primeiroAno, quantidadeAnos, nomeTabela);
-
-            int[] anosInicialFinal = new int[2] { 2000, 2021 };
+            int quantidadeAnos = 1;
+            string caminho = @"C:\Users\guisi\OneDrive\Documentos\";
+            string nomeTabela = "DimTempo";
             Console.WriteLine("Antes de executar");
-            BuscarFeriados();
+
+            CriarArquivos(nomeTabela, caminho);
+            ScriptTabela(nomeTabela, caminho, primeiroAno, quantidadeAnos);
+            BuscarFeriados(nomeTabela, caminho, primeiroAno, quantidadeAnos);
+
             Console.WriteLine("Depois de executar");
         }
 
-        static void ScriptTabela(int primeiroDia, int primeiroMes, int primeiroAno, int quantidadeAnos, string nomeTabela)
+        private static void CriarArquivos(string nomeTabela, string caminho)
         {
-            int quantidadeDeDias = quantidadeAnos * 366;
+            string arquivoScript = @caminho + nomeTabela + "Script.sql";
+            string feriadosScript = @caminho + nomeTabela + "Feriados.sql";
 
-            StreamWriter arquivo = new("C:\\ScriptDimTempo.sql", false);
+            try
+            {
+                if (File.Exists(arquivoScript))
+                {
+                    File.Delete(arquivoScript);
+                }                
+                using (StreamWriter arquivo = File.CreateText(arquivoScript))
+                {
+                    arquivo.WriteLine($"/* Arquivo gerado em {System.DateTime.Now} */");
+                    arquivo.WriteLine();
+                    arquivo.Close();
+                }
+                Console.WriteLine($"Arquivo {nomeTabela}Script criado com sucesso.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ocorreu um erro: {ex.Message}");
+            }
+
+            try
+            {
+                if (File.Exists(feriadosScript))
+                {
+                    File.Delete(feriadosScript);
+                }
+                using (StreamWriter arquivo = File.CreateText(feriadosScript))
+                {
+                    arquivo.WriteLine($"/* Arquivo gerado em {System.DateTime.Now} */");
+                    arquivo.WriteLine();
+                    arquivo.Close();
+                }
+                Console.WriteLine($"Arquivo {nomeTabela}Feriados criado com sucesso.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ocorreu um erro: {ex.Message}");
+            }
+        }
+
+        private static void ScriptTabela(string nomeTabela, string caminho, int primeiroAno, int quantidadeAnos)
+        {
+            StreamWriter arquivo = new(caminho + nomeTabela + "Script.sql", true);
             Calendar calendario = CultureInfo.CurrentCulture.Calendar;
-
-            DateTime dataInicial = new(primeiroAno, primeiroMes, primeiroDia);
-            DateTime dataFinal = dataInicial.AddDays(quantidadeDeDias - 1);
+            DateTime dataInicial = new(primeiroAno, 1, 1);
+            DateTime dataFinal = dataInicial.AddYears(quantidadeAnos);
+            dataFinal = dataFinal.AddDays(-1);
 
             arquivo.WriteLine("/*");
-            arquivo.WriteLine($"Arquivo gerado em {System.DateTime.Now}");
             arquivo.WriteLine($"Tabela com o nome {nomeTabela}");
             arquivo.WriteLine($"Data inicial dos valores {dataInicial}");
-            arquivo.WriteLine($"Dias criados {quantidadeDeDias}");
+            arquivo.WriteLine($"Anos criados {quantidadeAnos}");
             arquivo.WriteLine($"Data final dos valores {dataFinal}");
-
             arquivo.WriteLine("*/");
             arquivo.WriteLine();
 
-            arquivo.WriteLine($"DROP TABLE [dbo].[{nomeTabela}]");
+            arquivo.WriteLine($"IF OBJECT_ID('{nomeTabela}', 'U') IS NOT NULL");
+            arquivo.WriteLine("BEGIN");
+            arquivo.WriteLine($"DROP TABLE {nomeTabela}");
+            arquivo.WriteLine("END");
             arquivo.WriteLine("GO");
             arquivo.WriteLine();
 
@@ -68,11 +112,15 @@ namespace DimTempoGenerator
                                 $"\tNomeDiaSemana varchar(20),\n" +
                                 $"\tNomeMes varchar(20),\n" +
                                 $"\tFeriado bit DEFAULT 0,\n" +
-                                $"\tFeriadoNome varchar(20) DEFAULT ''\n" +
+                                $"\tFeriadoNome varchar(200) DEFAULT ''\n" +
                                 ")");
             arquivo.WriteLine();
 
-            for (int i = 0; i < quantidadeDeDias; i++)
+            arquivo.WriteLine($"SELECT * FROM [dbo].[{nomeTabela}]");
+            arquivo.WriteLine();
+
+            // 
+            for (int i = 0; dataInicial.AddDays(i) <= dataFinal; i++)
             {
                 DateTime data = dataInicial.AddDays(i);
                 int diaMes = data.Day;
@@ -91,7 +139,7 @@ namespace DimTempoGenerator
                 int feriado = 0;
                 string feriadoNome = "";
 
-                arquivo.WriteLine($"INSERT INTO [dbo.][{nomeTabela}] " +
+                arquivo.WriteLine($"INSERT INTO [dbo].[{nomeTabela}] " +
                     $"VALUES ({ano}{zeroEsquerda(mes)}{zeroEsquerda(diaMes)}," +
                     $"'{ano}-{zeroEsquerda(mes)}-{zeroEsquerda(diaMes)}T00:00:00'," +
                     $"{diaMes}," +
@@ -125,35 +173,50 @@ namespace DimTempoGenerator
                 return valor;
             }
         }
-        static async Task ScriptFeriados(string nomeTabela, int[] anosInicialFinal)
-        {
-            HttpClient client = new HttpClient { BaseAddress = new Uri("https://brasilapi.com.br/api/feriados/v1") };
-            var response = await client.GetAsync("2000");
-            var content = await response.Content.ReadAsStringAsync();
-            Console.WriteLine("Teste aqui ?");
 
-            var resposta = JsonConvert.DeserializeObject(content);
-            Console.WriteLine(resposta);
-            Console.ReadLine();
-        }
-
-        public static void BuscarFeriados()
+        private static void BuscarFeriados(string nomeTabela, string caminho, int primeiroAno, int quantidadeAnos)
         {
-            string urlApi = "https://brasilapi.com.br/api/feriados/v1/2020";
-            try
+            StreamWriter arquivo = new(caminho + nomeTabela + "Feriados.sql", true);
+
+            List<Feriado> feriados = new List<Feriado>();
+
+            int anoBusca = primeiroAno;
+            string urlApi = "https://brasilapi.com.br/api/feriados/v1/";
+
+            while (anoBusca < primeiroAno + quantidadeAnos)
             {
-                using (var cliente = new HttpClient())
+                try
                 {
-                    var resposta = cliente.GetStringAsync(urlApi);
-                    resposta.Wait();
-                    var retorno = JsonConvert.DeserializeObject<Feriados[]>(resposta.Result).ToList();
-                    Console.WriteLine(retorno[0]);
+                    using (var cliente = new HttpClient())
+                    {
+                        var resposta = cliente.GetStringAsync(urlApi + anoBusca);
+                        resposta.Wait();
+                        var retorno = JsonConvert.DeserializeObject<Feriado[]>(resposta.Result).ToList();
+
+                        foreach (Feriado i in retorno)
+                        {
+                            feriados.Add(i);
+                        }
+                    }
                 }
+                catch (Exception ex)
+                {
+                    throw;
+                }
+                anoBusca++;
             }
-            catch (Exception ex)
+
+            arquivo.WriteLine("BEGIN TRAN");
+            arquivo.WriteLine("-- COMMIT");
+
+            foreach (Feriado f in feriados)
             {
-                throw;
+                string id = f.date.ToString("yyyyMMdd");
+                arquivo.WriteLine($"UPDATE [dbo].[{nomeTabela}] SET FeriadoNome = '{f.name}', Feriado = 1 WHERE TempoID = {id}");
             }
+            arquivo.WriteLine();
+            arquivo.WriteLine($"SELECT * FROM [dbo].[{nomeTabela}] WHERE Feriado = 1");
+            arquivo.Close();
         }
     }
 }
