@@ -19,15 +19,35 @@ namespace DimTempoGenerator
             int quantidadeAnos = 1;
             string caminho = @"C:\Users\guisi\OneDrive\Documentos\";
             string nomeTabela = "DimTempo";
+
             Console.WriteLine("Antes de executar");
-
-            CriarArquivos(nomeTabela, caminho);
-            ScriptTabela(nomeTabela, caminho, primeiroAno, quantidadeAnos);
-            BuscarFeriados(nomeTabela, caminho, primeiroAno, quantidadeAnos);
-
+            Executar(nomeTabela, caminho, primeiroAno, quantidadeAnos);
             Console.WriteLine("Depois de executar");
         }
 
+        /// <summary>
+        /// Função principal que executa as demais operações
+        /// </summary>
+        /// <param name="nomeTabela">Nome da tabela que será criada.</param>
+        /// <param name="caminho">Endereço onde o arquivo será salvo.</param>
+        /// <param name="primeiroAno">Primeiro ano de registro.</param>
+        /// <param name="quantidadeAnos">Quantidade de anos para registro.</param>
+        /// <returns>Cria dois arquivos no endereço fornecido que contém: 1 scrip de criação da tabela e inserção dos registros; 1 script (update) com os principais feriados nacionais consultados em API pública.</returns>
+        public static void Executar(string nomeTabela, string caminho, int primeiroAno, int quantidadeAnos)
+        {
+            Console.WriteLine("Antes de executar");
+            CriarArquivos(nomeTabela, caminho);
+            ScriptTabela(nomeTabela, caminho, primeiroAno, quantidadeAnos);
+            BuscarFeriados(nomeTabela, caminho, primeiroAno, quantidadeAnos);
+            Console.WriteLine("Depois de executar");
+        }
+
+        /// <summary>
+        /// Verifica a existencia dos arquivos, faz a criação se ainda não existir
+        /// </summary>
+        /// <param name="nomeTabela">Nome da tabela que será criada.</param>
+        /// <param name="caminho">Endereço onde o arquivo será salvo.</param>
+        /// <returns>Cria dois arquivos no endereço fornecido em branco para gravação dos dados.</returns>
         private static void CriarArquivos(string nomeTabela, string caminho)
         {
             string arquivoScript = @caminho + nomeTabela + "Script.sql";
@@ -72,6 +92,14 @@ namespace DimTempoGenerator
             }
         }
 
+        /// <summary>
+        /// Escreve o script de criação da tabela e de inserção dos registros
+        /// </summary>
+        /// <param name="nomeTabela">Nome da tabela que será criada.</param>
+        /// <param name="caminho">Endereço onde o arquivo será salvo.</param>
+        /// <param name="primeiroAno">Primeiro ano de registro.</param>
+        /// <param name="quantidadeAnos">Quantidade de anos para registro.</param>
+        /// <returns>Insere os scripts no arquivo responsável</returns>
         private static void ScriptTabela(string nomeTabela, string caminho, int primeiroAno, int quantidadeAnos)
         {
             StreamWriter arquivo = new(caminho + nomeTabela + "Script.sql", true);
@@ -81,10 +109,9 @@ namespace DimTempoGenerator
             dataFinal = dataFinal.AddDays(-1);
 
             arquivo.WriteLine("/*");
-            arquivo.WriteLine($"Tabela com o nome {nomeTabela}");
-            arquivo.WriteLine($"Data inicial dos valores {dataInicial}");
-            arquivo.WriteLine($"Anos criados {quantidadeAnos}");
-            arquivo.WriteLine($"Data final dos valores {dataFinal}");
+            arquivo.WriteLine($"Tabela criada com o nome {nomeTabela}");
+            arquivo.WriteLine($"Período de {dataInicial.ToString("dd/MM/yyyy")} a {dataFinal.ToString("dd/MM/yyyy")}");
+            arquivo.WriteLine($"Sendo portando, um período de {quantidadeAnos}");
             arquivo.WriteLine("*/");
             arquivo.WriteLine();
 
@@ -116,10 +143,9 @@ namespace DimTempoGenerator
                                 ")");
             arquivo.WriteLine();
 
-            arquivo.WriteLine($"SELECT * FROM [dbo].[{nomeTabela}]");
+            arquivo.WriteLine($"-- SELECT * FROM [dbo].[{nomeTabela}]");
             arquivo.WriteLine();
 
-            // 
             for (int i = 0; dataInicial.AddDays(i) <= dataFinal; i++)
             {
                 DateTime data = dataInicial.AddDays(i);
@@ -163,6 +189,12 @@ namespace DimTempoGenerator
             arquivo.WriteLine($"SELECT * FROM [dbo].[{nomeTabela}]");
             arquivo.Close();
 
+
+            /// <summary>
+            /// Insere um zero(0) à esquerda
+            /// </summary>
+            /// <param name="num">Valor de entrada.</param>
+            /// <returns>String contendo algarismo de 2 dígitos</returns>
             static string zeroEsquerda(int num)
             {
                 string valor = Convert.ToString(num);
@@ -174,9 +206,24 @@ namespace DimTempoGenerator
             }
         }
 
+        /// <summary>
+        /// Escreve o script de atualização da tabela com os feriados
+        /// </summary>
+        /// <param name="nomeTabela">Nome da tabela que será criada.</param>
+        /// <param name="caminho">Endereço onde o arquivo será salvo.</param>
+        /// <param name="primeiroAno">Primeiro ano de registro.</param>
+        /// <param name="quantidadeAnos">Quantidade de anos para registro.</param>
+        /// <returns>Insere os scripts no arquivo responsável</returns>
         private static void BuscarFeriados(string nomeTabela, string caminho, int primeiroAno, int quantidadeAnos)
         {
             StreamWriter arquivo = new(caminho + nomeTabela + "Feriados.sql", true);
+
+            arquivo.WriteLine("/*");
+            arquivo.WriteLine($"Tabela criada com o nome {nomeTabela}");
+            arquivo.WriteLine($"Feriados de {primeiroAno} a {primeiroAno + quantidadeAnos}");
+            arquivo.WriteLine($"Sendo portando, um período de {quantidadeAnos}");
+            arquivo.WriteLine("*/");
+            arquivo.WriteLine();
 
             List<Feriado> feriados = new List<Feriado>();
 
@@ -187,11 +234,11 @@ namespace DimTempoGenerator
             {
                 try
                 {
-                    using (var cliente = new HttpClient())
+                    using (HttpClient cliente = new HttpClient())
                     {
-                        var resposta = cliente.GetStringAsync(urlApi + anoBusca);
+                        Task<string> resposta = cliente.GetStringAsync(urlApi + anoBusca);
                         resposta.Wait();
-                        var retorno = JsonConvert.DeserializeObject<Feriado[]>(resposta.Result).ToList();
+                        List<Feriado> retorno = JsonConvert.DeserializeObject<Feriado[]>(resposta.Result).ToList();
 
                         foreach (Feriado i in retorno)
                         {
@@ -201,13 +248,14 @@ namespace DimTempoGenerator
                 }
                 catch (Exception ex)
                 {
-                    throw;
+                    Console.WriteLine($"Ocorreu um erro: {ex.Message}");
                 }
                 anoBusca++;
             }
 
             arquivo.WriteLine("BEGIN TRAN");
             arquivo.WriteLine("-- COMMIT");
+            arquivo.WriteLine();
 
             foreach (Feriado f in feriados)
             {
